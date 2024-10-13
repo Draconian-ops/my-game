@@ -13,7 +13,14 @@ const gameOverElement = document.getElementById('game-over');
 const startAgainButton = document.getElementById('start-again');
 
 function init() {
+    // Clear all existing words from the game container
+    currentWords.forEach(wordObj => {
+        gameContainer.removeChild(wordObj.element);
+    });
+    // Reset currentWords array
     currentWords = [];
+
+    // Reset other game variables
     wordLength = 3;
     wordSpeed = 1;
     score = 0;
