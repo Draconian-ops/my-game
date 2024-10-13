@@ -1,103 +1,180 @@
-const words = ['the', 'be', 'of', 'and', 'a', 'to', 'in', 'he', 'have', 'it', 'that', 'for', 'they', 'with', 'as', 'not', 'on', 'she', 'at', 'by', 'this', 'we', 'you', 'do', 'but', 'from', 'or', 'which', 'one', 'would', 'all', 'will', 'there', 'say', 'who', 'make', 'when', 'can', 'more', 'if', 'no', 'man', 'out', 'other', 'so', 'what', 'time', 'up', 'go', 'about', 'than', 'into', 'could', 'state', 'only'];
-let currentWords = [];
-let wordLength = 3;
-let wordSpeed = 1;
-let score = 0;
-let gameOver = false;
-let lastSpeedUpdate = Date.now();
+const words = ['alien', 'planet', 'galaxy', 'asteroid', 'nebula', 'comet', 'meteor', 'starship', 'cosmos', 'lunar', 'solar', 'orbit', 'gravity', 'wormhole', 'quasar', 'pulsar', 'supernova', 'telescope', 'constellation', 'interstellar'];
+        let currentWords = [];
+        let wordSpeed = 1;
+        let score = 0;
+        let gameOver = false;
+        let lastSpeedUpdate = Date.now();
 
-const gameContainer = document.getElementById('game-container');
-const input = document.getElementById('input');
-const scoreElement = document.getElementById('score-value');
-const gameOverElement = document.getElementById('game-over');
-const startAgainButton = document.getElementById('start-again');
+        const gameArea = document.getElementById('game-area');
+        const input = document.getElementById('input');
+        const scoreElement = document.getElementById('score-value');
+        const gameOverElement = document.getElementById('game-over');
+        const startAgainButton = document.getElementById('start-again');
 
-function init() {
-    // Clear all existing words from the game container
-    currentWords.forEach(wordObj => {
-        gameContainer.removeChild(wordObj.element);
-    });
-    // Reset currentWords array
-    currentWords = [];
+        // Starfield
+        const canvas = document.getElementById('starfield');
+        const ctx = canvas.getContext('2d');
+        let stars = [];
 
-    // Reset other game variables
-    wordLength = 3;
-    wordSpeed = 1;
-    score = 0;
-    gameOver = false;
-    lastSpeedUpdate = Date.now();
-    scoreElement.textContent = score;
-    gameOverElement.style.display = 'none';
-    input.value = '';
-    input.focus();
-}
-
-function createWord() {
-    const word = words[Math.floor(Math.random() * words.length)];
-    const wordElement = document.createElement('div');
-    wordElement.className = 'word';
-    wordElement.textContent = word;
-    wordElement.style.left = `${Math.random() * (gameContainer.offsetWidth - 100)}px`;
-    gameContainer.appendChild(wordElement);
-    currentWords.push({ element: wordElement, word: word });
-}
-
-function updateWordPositions() {
-    for (let i = currentWords.length - 1; i >= 0; i--) {
-        const wordObj = currentWords[i];
-        const top = wordObj.element.offsetTop + wordSpeed;
-        wordObj.element.style.top = `${top}px`;
-
-        if (top > gameContainer.offsetHeight) {
-            gameContainer.removeChild(wordObj.element);
-            currentWords.splice(i, 1);
-            endGame();
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initStars();
         }
-    }
-}
 
-function checkInput() {
-    const typedWord = input.value.trim().toLowerCase();
-    for (let i = 0; i < currentWords.length; i++) {
-        if (currentWords[i].word === typedWord) {
-            score++;
+        function initStars() {
+            stars = [];
+            for (let i = 0; i < 200; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * 2,
+                    speed: Math.random() * 3 + 1
+                });
+            }
+        }
+
+        function drawStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#fff';
+            stars.forEach(star => {
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+                ctx.fill();
+                star.y += star.speed;
+                if (star.y > canvas.height) {
+                    star.y = 0;
+                }
+            });
+            requestAnimationFrame(drawStars);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        drawStars();
+
+        function init() {
+            currentWords = [];
+            wordSpeed = 1;
+            score = 0;
+            gameOver = false;
+            lastSpeedUpdate = Date.now();
             scoreElement.textContent = score;
-            gameContainer.removeChild(currentWords[i].element);
-            currentWords.splice(i, 1);
+            gameOverElement.style.display = 'none';
             input.value = '';
-            break;
+            input.focus();
+            gameArea.innerHTML = '';
         }
-    }
-}
 
-function updateWordSpeed() {
-    const now = Date.now();
-    if (now - lastSpeedUpdate > 30000) {
-        wordSpeed *= 1.5;
-        lastSpeedUpdate = now;
-    }
-}
+        function createWord() {
+            const word = words[Math.floor(Math.random() * words.length)];
+            const wordElement = document.createElement('div');
+            wordElement.className = 'word';
+            wordElement.textContent = word;
+            gameArea.appendChild(wordElement);
+            
+            const wordWidth = wordElement.offsetWidth;
+            const wordHeight = wordElement.offsetHeight;
+            
+            // Find a non-overlapping position for the new word
+            let left, top;
+            let overlapping;
+            let attempts = 0;
+            const maxAttempts = 50;
 
-function endGame() {
-    gameOver = true;
-    gameOverElement.style.display = 'block';
-}
+            do {
+                left = Math.random() * (gameArea.offsetWidth - wordWidth);
+                top = -wordHeight;  // Start above the game area
+                overlapping = currentWords.some(existingWord => {
+                    return (left < existingWord.left + existingWord.width &&
+                            left + wordWidth > existingWord.left &&
+                            top < existingWord.top + existingWord.height &&
+                            top + wordHeight > existingWord.top);
+                });
+                attempts++;
+            } while (overlapping && attempts < maxAttempts);
 
-function gameLoop() {
-    if (!gameOver) {
-        updateWordPositions();
-        updateWordSpeed();
-        if (Math.random() < 0.02) createWord();
-        requestAnimationFrame(gameLoop);
-    }
-}
+            if (attempts === maxAttempts) {
+                gameArea.removeChild(wordElement);
+                return false;  // Couldn't find a non-overlapping position
+            }
 
-input.addEventListener('input', checkInput);
+            wordElement.style.left = `${left}px`;
+            wordElement.style.top = `${top}px`;
 
-startAgainButton.addEventListener('click', () => {
-    init();
-    gameLoop();
-});
+            currentWords.push({
+                element: wordElement,
+                word: word,
+                left: left,
+                top: top,
+                width: wordWidth,
+                height: wordHeight
+            });
 
-init();
-gameLoop();
+            return true;
+        }
+
+        function updateWordPositions() {
+            for (let i = currentWords.length - 1; i >= 0; i--) {
+                const wordObj = currentWords[i];
+                wordObj.top += wordSpeed;
+                wordObj.element.style.top = `${wordObj.top}px`;
+
+                if (wordObj.top > gameArea.offsetHeight) {
+                    gameArea.removeChild(wordObj.element);
+                    currentWords.splice(i, 1);
+                    endGame();
+                }
+            }
+        }
+
+        function checkInput() {
+            const typedWord = input.value.trim().toLowerCase();
+            for (let i = 0; i < currentWords.length; i++) {
+                if (currentWords[i].word === typedWord) {
+                    score++;
+                    scoreElement.textContent = score;
+                    currentWords[i].element.classList.add('correct');
+                    setTimeout(() => {
+                        gameArea.removeChild(currentWords[i].element);
+                        currentWords.splice(i, 1);
+                    }, 300);
+                    input.value = '';
+                    break;
+                }
+            }
+        }
+
+        function updateWordSpeed() {
+            const now = Date.now();
+            if (now - lastSpeedUpdate > 30000) {
+                wordSpeed *= 1.2;
+                lastSpeedUpdate = now;
+            }
+        }
+
+        function endGame() {
+            gameOver = true;
+            gameOverElement.style.display = 'block';
+        }
+
+        function gameLoop() {
+            if (!gameOver) {
+                updateWordPositions();
+                updateWordSpeed();
+                if (Math.random() < 0.02 && currentWords.length < 10) {
+                    createWord();
+                }
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        input.addEventListener('input', checkInput);
+
+        startAgainButton.addEventListener('click', () => {
+            init();
+            gameLoop();
+        });
+
+        init();
+        gameLoop();
